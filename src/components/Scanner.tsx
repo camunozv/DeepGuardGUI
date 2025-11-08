@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type ScanStatus = "idle" | "scanning" | "complete";
 type ScanResult = "authentic" | "fake" | null;
-type CaptureMode = "camera" | "screen";
+type CaptureMode = "camera" | "screen" | "audio";
 
 interface ScannerProps {
   onScanComplete: (result: { status: ScanResult; timestamp: Date }) => void;
@@ -36,10 +36,10 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
         video: { facingMode: "user" },
         audio: true,
       });
-      
+
       setStream(mediaStream);
       setHasPermissions(true);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -63,10 +63,10 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
         video: true,
         audio: true, // Request audio from screen share if available
       });
-      
+
       setStream(mediaStream);
       setHasPermissions(true);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -97,11 +97,39 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
     }
   };
 
+  const requestAudioPermissions = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: true,
+      });
+
+      setStream(mediaStream);
+      setHasPermissions(true);
+
+      // For audio-only, we don't need to set video srcObject
+      // But we can still use the video element to show audio visualization if needed
+
+      toast({
+        title: "Microphone access granted",
+        description: "Audio recording is ready",
+      });
+    } catch (error) {
+      toast({
+        title: "Permission denied",
+        description: "Please allow microphone access",
+        variant: "destructive",
+      });
+    }
+  };
+
   const requestPermissions = async () => {
     if (captureMode === "camera") {
       await requestCameraPermissions();
-    } else {
+    } else if (captureMode === "screen") {
       await requestScreenCapture();
+    } else if (captureMode === "audio") {
+      await requestAudioPermissions();
     }
   };
 
@@ -120,7 +148,7 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
       const result: ScanResult = Math.random() > 0.3 ? "authentic" : "fake";
       setScanResult(result);
       setScanStatus("complete");
-      
+
       onScanComplete({
         status: result,
         timestamp: new Date(),
@@ -128,8 +156,8 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
 
       toast({
         title: result === "authentic" ? "Verified Authentic" : "Deepfake Detected",
-        description: result === "authentic" 
-          ? "This content appears to be genuine" 
+        description: result === "authentic"
+          ? "This content appears to be genuine"
           : "Warning: This content may be manipulated",
         variant: result === "authentic" ? "default" : "destructive",
       });
@@ -166,7 +194,7 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] p-4 space-y-6">
       {/* Mode Selector */}
       <Tabs value={captureMode} onValueChange={(value) => setCaptureMode(value as CaptureMode)} className="w-full max-w-md">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="camera" className="gap-2">
             <Camera className="w-4 h-4" />
             Camera
@@ -175,19 +203,39 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
             <Monitor className="w-4 h-4" />
             Screen
           </TabsTrigger>
+          <TabsTrigger value="audio" className="gap-2">
+            <Mic className="w-4 h-4" />
+            Audio
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
       <Card className="relative w-full max-w-md aspect-[3/4] overflow-hidden bg-card shadow-scanner">
         {/* Video Preview */}
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        
+        {captureMode !== "audio" && (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+
+        {/* Audio-only visualization */}
+        {captureMode === "audio" && hasPermissions && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-primary/20 to-primary/5">
+            <div className="text-center space-y-4">
+              <div className="relative w-32 h-32 mx-auto">
+                <div className="absolute inset-0 rounded-full border-4 border-primary/30 animate-pulse" />
+                <div className="absolute inset-4 rounded-full border-4 border-primary/50 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <Mic className="w-16 h-16 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <p className="text-sm font-medium text-primary">Recording Audio</p>
+            </div>
+          </div>
+        )}
+
         {/* Overlay when no permissions */}
         {!hasPermissions && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm">
@@ -197,14 +245,18 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
                   <Camera className="w-12 h-12 text-muted-foreground" />
                   <Mic className="w-12 h-12 text-muted-foreground" />
                 </>
-              ) : (
+              ) : captureMode === "screen" ? (
                 <MonitorPlay className="w-12 h-12 text-muted-foreground" />
+              ) : (
+                <Mic className="w-12 h-12 text-muted-foreground" />
               )}
             </div>
             <p className="text-sm text-muted-foreground text-center px-6">
-              {captureMode === "camera" 
+              {captureMode === "camera"
                 ? "Camera and microphone access required for deepfake detection"
-                : "Screen sharing required to analyze content on your screen"}
+                : captureMode === "screen"
+                  ? "Screen sharing required to analyze content on your screen"
+                  : "Microphone access required for audio analysis"}
             </p>
           </div>
         )}
@@ -282,10 +334,15 @@ export default function Scanner({ onScanComplete }: ScannerProps) {
                   <Camera className="w-5 h-5 mr-2" />
                   Enable Camera & Mic
                 </>
-              ) : (
+              ) : captureMode === "screen" ? (
                 <>
                   <Monitor className="w-5 h-5 mr-2" />
                   Start Screen Share
+                </>
+              ) : (
+                <>
+                  <Mic className="w-5 h-5 mr-2" />
+                  Enable Microphone
                 </>
               )}
             </>

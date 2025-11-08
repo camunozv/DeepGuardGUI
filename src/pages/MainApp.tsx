@@ -11,7 +11,7 @@ interface HistoryItem {
   timestamp: Date;
 }
 
-const Index = () => {
+const MainApp = () => {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
 
   const handleScanComplete = (result: { status: "authentic" | "fake" | null; timestamp: Date }) => {
@@ -89,4 +89,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default MainApp;
