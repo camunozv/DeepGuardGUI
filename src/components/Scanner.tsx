@@ -217,14 +217,10 @@ export default function Scanner({ onScanComplete, onResultReady }: ScannerProps)
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] p-4 space-y-6">
       {/* Mode Selector */}
       <Tabs value={captureMode} onValueChange={(value) => setCaptureMode(value as CaptureMode)} className="w-full max-w-md">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="camera" className="gap-2">
             <Camera className="w-4 h-4" />
-            Camera
-          </TabsTrigger>
-          <TabsTrigger value="screen" className="gap-2">
-            <Monitor className="w-4 h-4" />
-            Screen
+            Video
           </TabsTrigger>
           <TabsTrigger value="audio" className="gap-2">
             <Mic className="w-4 h-4" />
