@@ -1,28 +1,36 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scanner } from "@/components/Scanner";
+import Scanner from "@/components/Scanner";
 import { Upload } from "@/components/Upload";
+import { useNavigate } from "react-router-dom";
 import { History } from "@/components/History";
-import { Shield, ScanLine, Clock, Upload as UploadIcon } from "lucide-react";
+import { Shield, ScanLine, Clock, Upload as UploadIcon, Video } from "lucide-react";
+import ScreenRecorder from "@/components/ScreenRecorder";
 
 interface HistoryItem {
   id: string;
+  resultId: string; // Add this - the ID used for the result page URL
   status: "authentic" | "fake";
   timestamp: Date;
 }
 
-const Index = () => {
+const MainApp = () => {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
-
-  const handleScanComplete = (result: { status: "authentic" | "fake" | null; timestamp: Date }) => {
+  const navigate = useNavigate();
+  const handleScanComplete = (result: { status: "authentic" | "fake" | null; timestamp: Date; resultId?: string }) => {
     if (result.status) {
       const newItem: HistoryItem = {
         id: `scan-${Date.now()}`,
+        resultId: result.resultId,
         status: result.status,
         timestamp: result.timestamp,
       };
       setHistoryItems((prev) => [newItem, ...prev]);
     }
+  };
+
+  const handleResultReady = (resultId: string, result: "authentic" | "fake" | null) => {
+    navigate(`/scan_result/${resultId}`);
   };
 
   return (
@@ -53,12 +61,20 @@ const Index = () => {
             Scanner
           </TabsTrigger>
           <TabsTrigger
+            value="record"
+            className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+          >
+            <Video className="w-4 h-4" />
+            Screen
+          </TabsTrigger>
+          <TabsTrigger
             value="upload"
             className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
           >
             <UploadIcon className="w-4 h-4" />
             Upload
           </TabsTrigger>
+          
           <TabsTrigger
             value="history"
             className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
@@ -74,11 +90,18 @@ const Index = () => {
         </TabsList>
 
         <TabsContent value="scanner" className="m-0">
-          <Scanner onScanComplete={handleScanComplete} />
+          <Scanner onScanComplete={handleScanComplete} onResultReady={handleResultReady}/>
         </TabsContent>
 
         <TabsContent value="upload" className="m-0">
           <Upload onScanComplete={handleScanComplete} />
+        </TabsContent>
+
+        <TabsContent value="record" className="m-0">
+          <ScreenRecorder 
+            onScanComplete={handleScanComplete}
+            onResultReady={handleResultReady}
+          />
         </TabsContent>
 
         <TabsContent value="history" className="m-0">
@@ -89,4 +112,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default MainApp;
